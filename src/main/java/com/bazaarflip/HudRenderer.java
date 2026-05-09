@@ -13,12 +13,13 @@ public class HudRenderer {
     private static final int LINE = 11;
     private static final int PAD  = 5;
 
-    private static final int COLOR_GOLD    = 0xFFAA00;
-    private static final int COLOR_WHITE   = 0xFFFFFF;
-    private static final int COLOR_GREEN   = 0x55FF55;
-    private static final int COLOR_RED     = 0xFF5555;
-    private static final int COLOR_YELLOW  = 0xFFFF55;
-    private static final int COLOR_GRAY    = 0xAAAAAA;
+    // Culori cu alpha (0xFF = complet vizibil)
+    private static final int COLOR_GOLD   = 0xFFFFAA00;
+    private static final int COLOR_WHITE  = 0xFFFFFFFF;
+    private static final int COLOR_GREEN  = 0xFF55FF55;
+    private static final int COLOR_RED    = 0xFFFF5555;
+    private static final int COLOR_YELLOW = 0xFFFFFF55;
+    private static final int COLOR_GRAY   = 0xFFAAAAAA;
 
     public static void render(DrawContext ctx, RenderTickCounter tickCounter) {
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -44,25 +45,10 @@ public class HudRenderer {
         draw(ctx, mc, "Top Buy:  " + fmt(t.getBestBuyPrice()),  x, y, COLOR_GRAY);  y += LINE;
         draw(ctx, mc, "Top Sell: " + fmt(t.getBestSellPrice()), x, y, COLOR_GRAY);  y += LINE + 1;
 
-        String buyStatus  = "Your Buy:  " + fmt(t.getYourBuyOrderPrice())  + queueTag(t.getBuyQueuePosition())  + (buyUndercut  ? "  UNDERCUT!" : "  OK");
-        String sellStatus = "Your Sell: " + fmt(t.getYourSellOrderPrice()) + queueTag(t.getSellQueuePosition()) + (sellUndercut ? "  UNDERCUT!" : "  OK");
+        String buyStatus  = "Your Buy:  " + fmt(t.getYourBuyOrderPrice())
+                + queueTag(t.getBuyQueuePosition()) + (buyUndercut ? "  UNDERCUT!" : "  OK");
+        String sellStatus = "Your Sell: " + fmt(t.getYourSellOrderPrice())
+                + queueTag(t.getSellQueuePosition()) + (sellUndercut ? "  UNDERCUT!" : "  OK");
 
         draw(ctx, mc, buyStatus,  x, y, buyUndercut  ? COLOR_RED : COLOR_GREEN); y += LINE;
-        draw(ctx, mc, sellStatus, x, y, sellUndercut ? COLOR_RED : COLOR_GREEN); y += LINE;
-
-        if (buyUndercut)  { draw(ctx, mc, ">> Cancel & set buy to  " + DF.format(t.getRecommendedBuyPrice())  + " coins", x, y, COLOR_YELLOW); y += LINE; }
-        if (sellUndercut) { draw(ctx, mc, ">> Cancel & set sell to " + DF.format(t.getRecommendedSellPrice()) + " coins", x, y, COLOR_YELLOW); }
-    }
-
-    private static void draw(DrawContext ctx, MinecraftClient mc, String text, int x, int y, int color) {
-        ctx.drawText(mc.textRenderer, Text.literal(text), x, y, color, true);
-    }
-
-    private static String fmt(double v) {
-        return v > 0 ? DF.format(v) + " coins" : "N/A";
-    }
-
-    private static String queueTag(int pos) {
-        return pos > 0 ? " (#" + pos + ")" : "";
-    }
-}
+        draw(ctx, mc, sellStatus, x, y, sellUndercut ? COLOR_RED : COLOR_
