@@ -51,4 +51,21 @@ public class HudRenderer {
                 + queueTag(t.getSellQueuePosition()) + (sellUndercut ? "  UNDERCUT!" : "  OK");
 
         draw(ctx, mc, buyStatus,  x, y, buyUndercut  ? COLOR_RED : COLOR_GREEN); y += LINE;
-        draw(ctx, mc, sellStatus, x, y, sellUndercut ? COLOR_RED : COLOR_
+        draw(ctx, mc, sellStatus, x, y, sellUndercut ? COLOR_RED : COLOR_GREEN); y += LINE;
+
+        if (buyUndercut)  { draw(ctx, mc, ">> Cancel & set buy to  " + DF.format(t.getRecommendedBuyPrice())  + " coins", x, y, COLOR_YELLOW); y += LINE; }
+        if (sellUndercut) { draw(ctx, mc, ">> Cancel & set sell to " + DF.format(t.getRecommendedSellPrice()) + " coins", x, y, COLOR_YELLOW); }
+    }
+
+    private static void draw(DrawContext ctx, MinecraftClient mc, String text, int x, int y, int color) {
+        ctx.drawText(mc.textRenderer, Text.literal(text), x, y, color, true);
+    }
+
+    private static String fmt(double v) {
+        return v > 0 ? DF.format(v) + " coins" : "N/A";
+    }
+
+    private static String queueTag(int pos) {
+        return pos > 0 ? " (#" + pos + ")" : "";
+    }
+}
