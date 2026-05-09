@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "bazaarflip",
+  "version": "${version}",
+  "name": "Bazaar Flip Helper",
+  "description": "Helper mod for Hypixel Skyblock Bazaar flipping - shows undercut alerts and recommended prices.",
+  "authors": ["You"],
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.bazaarflip.BazaarFlipMod"]
+  },
+  "mixins": ["bazaarflip.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21"
+  }
+}
