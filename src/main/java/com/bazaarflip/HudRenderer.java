@@ -3,26 +3,26 @@ package com.bazaarflip;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.text.Text;
 
 import java.text.DecimalFormat;
 
-/**
- * Renders a compact HUD in the top-left corner showing:
- *  - Tracked item
- *  - Current best buy / sell prices
- *  - Your active order prices
- *  - UNDERCUT warnings + recommended prices
- */
 public class HudRenderer {
 
     private static final DecimalFormat DF = new DecimalFormat("#,##0.0");
     private static final int LINE = 11;
     private static final int PAD  = 5;
 
+    private static final int COLOR_GOLD    = 0xFFAA00;
+    private static final int COLOR_WHITE   = 0xFFFFFF;
+    private static final int COLOR_GREEN   = 0x55FF55;
+    private static final int COLOR_RED     = 0xFF5555;
+    private static final int COLOR_YELLOW  = 0xFFFF55;
+    private static final int COLOR_GRAY    = 0xAAAAAA;
+
     public static void render(DrawContext ctx, RenderTickCounter tickCounter) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
-        // Don't draw while a screen (like the Bazaar GUI) is open
         if (mc.currentScreen != null) return;
 
         BazaarTracker t = BazaarFlipMod.TRACKER;
@@ -31,56 +31,38 @@ public class HudRenderer {
         boolean buyUndercut  = t.isBuyUndercut();
         boolean sellUndercut = t.isSellUndercut();
 
-        // ── Build lines ──────────────────────────────────────────────────────
-
-        String title   = "§6§lBazaar Flip §8│ §f" + t.getTrackedItem();
-        String buyBest = "§7Top Buy:  " + fmt(t.getBestBuyPrice());
-        String selBest = "§7Top Sell: " + fmt(t.getBestSellPrice());
-
-        String yourBuyLine = "§7Your Buy:  §e" + fmt(t.getYourBuyOrderPrice())
-                + queueTag(t.getBuyQueuePosition())
-                + (buyUndercut ? " §c§l⚠ UNDERCUT" : " §a✔");
-
-        String yourSelLine = "§7Your Sell: §e" + fmt(t.getYourSellOrderPrice())
-                + queueTag(t.getSellQueuePosition())
-                + (sellUndercut ? " §c§l⚠ UNDERCUT" : " §a✔");
-
-        // Optional action lines
-        String recBuy  = buyUndercut
-                ? "§c▶ Cancel & set buy to  §a§l" + DF.format(t.getRecommendedBuyPrice())  + " coins" : null;
-        String recSell = sellUndercut
-                ? "§c▶ Cancel & set sell to §a§l" + DF.format(t.getRecommendedSellPrice()) + " coins" : null;
-
-        // ── Count lines for background ────────────────────────────────────────
-        int lineCount = 5;
-        if (recBuy  != null) lineCount++;
-        if (recSell != null) lineCount++;
-
         int x = PAD;
         int y = PAD;
-        int bgW = 240;
-        int bgH = lineCount * LINE + PAD * 2;
 
-        // Background box
-        ctx.fill(x - 2, y - 2, x + bgW, y + bgH, 0xBB000000);
+        int lineCount = 5;
+        if (buyUndercut)  lineCount++;
+        if (sellUndercut) lineCount++;
 
-        // Draw each line
-        ctx.drawText(mc.textRenderer, title,      x, y, 0xFFFFFF, true); y += LINE + 1;
-        ctx.drawText(mc.textRenderer, buyBest,    x, y, 0xFFFFFF, true); y += LINE;
-        ctx.drawText(mc.textRenderer, selBest,    x, y, 0xFFFFFF, true); y += LINE + 1;
-        ctx.drawText(mc.textRenderer, yourBuyLine,x, y, 0xFFFFFF, true); y += LINE;
-        ctx.drawText(mc.textRenderer, yourSelLine,x, y, 0xFFFFFF, true); y += LINE;
+        ctx.fill(x - 2, y - 2, x + 250, y + lineCount * LINE + PAD * 2, 0xBB000000);
 
-        if (recBuy  != null) { ctx.drawText(mc.textRenderer, recBuy,  x, y, 0xFFFFFF, true); y += LINE; }
-        if (recSell != null) { ctx.drawText(mc.textRenderer, recSell, x, y, 0xFFFFFF, true); }
+        draw(ctx, mc, "Bazaar Flip: " + t.getTrackedItem(), x, y, COLOR_GOLD);   y += LINE + 1;
+        draw(ctx, mc, "Top Buy:  " + fmt(t.getBestBuyPrice()),  x, y, COLOR_GRAY);  y += LINE;
+        draw(ctx, mc, "Top Sell: " + fmt(t.getBestSellPrice()), x, y, COLOR_GRAY);  y += LINE + 1;
+
+        String buyStatus  = "Your Buy:  " + fmt(t.getYourBuyOrderPrice())  + queueTag(t.getBuyQueuePosition())  + (buyUndercut  ? "  UNDERCUT!" : "  OK");
+        String sellStatus = "Your Sell: " + fmt(t.getYourSellOrderPrice()) + queueTag(t.getSellQueuePosition()) + (sellUndercut ? "  UNDERCUT!" : "  OK");
+
+        draw(ctx, mc, buyStatus,  x, y, buyUndercut  ? COLOR_RED : COLOR_GREEN); y += LINE;
+        draw(ctx, mc, sellStatus, x, y, sellUndercut ? COLOR_RED : COLOR_GREEN); y += LINE;
+
+        if (buyUndercut)  { draw(ctx, mc, ">> Cancel & set buy to  " + DF.format(t.getRecommendedBuyPrice())  + " coins", x, y, COLOR_YELLOW); y += LINE; }
+        if (sellUndercut) { draw(ctx, mc, ">> Cancel & set sell to " + DF.format(t.getRecommendedSellPrice()) + " coins", x, y, COLOR_YELLOW); }
+    }
+
+    private static void draw(DrawContext ctx, MinecraftClient mc, String text, int x, int y, int color) {
+        ctx.drawText(mc.textRenderer, Text.literal(text), x, y, color, true);
     }
 
     private static String fmt(double v) {
-        return v > 0 ? "§a" + DF.format(v) + " coins" : "§8N/A";
+        return v > 0 ? DF.format(v) + " coins" : "N/A";
     }
 
     private static String queueTag(int pos) {
-        if (pos <= 0) return "";
-        return " §8(#" + pos + ")";
+        return pos > 0 ? " (#" + pos + ")" : "";
     }
 }
