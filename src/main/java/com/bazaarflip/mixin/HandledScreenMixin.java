@@ -37,7 +37,7 @@ public class HandledScreenMixin {
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
         String title = strip(self.getTitle().getString());
 
-        if (!title.contains("Bazaar")) return;
+        // debug: print for ANY screen
 
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
