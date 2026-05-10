@@ -2,7 +2,6 @@ package com.bazaarflip.mixin;
 
 import com.bazaarflip.BazaarFlipMod;
 import com.bazaarflip.BazaarTracker;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.component.DataComponentTypes;
@@ -21,51 +20,21 @@ import java.util.regex.Pattern;
 @Mixin(HandledScreen.class)
 public class HandledScreenMixin {
 
-    private String bazaarflip$lastTitle = "";
     private int bazaarflip$tickCounter = 0;
 
-    // Updated patterns based on real Hypixel lore format
-    private static final Pattern PAT_BUY_PRICE  = Pattern.compile("Buy price:\\s*([\\d,]+\\.?\\d*)");
-    private static final Pattern PAT_SELL_PRICE  = Pattern.compile("Sell price:\\s*([\\d,]+\\.?\\d*)");
-    private static final Pattern PAT_ORDER_AT    = Pattern.compile("at ([\\d,]+\\.?\\d*) coins");
-    private static final Pattern PAT_QUEUE_POS   = Pattern.compile("Position:\\s*#(\\d+)");
-    private static final Pattern PAT_BUYING      = Pattern.compile("(?i)buying");
-    private static final Pattern PAT_SELLING     = Pattern.compile("(?i)selling");
+    private static final Pattern PAT_PRICE_EACH     = Pattern.compile("([\\d,]+\\.?\\d*) coins each");
+    private static final Pattern PAT_PRICE_PER_UNIT = Pattern.compile("Price per unit:\\s*([\\d,]+\\.?\\d*)");
+    private static final Pattern PAT_QUEUE_POS      = Pattern.compile("#(\\d+) in queue");
 
     @Inject(method = "render", at = @At("HEAD"))
     private void bazaarflip$onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
-        String title = strip(self.getTitle().getString());
+        BazaarTracker tracker = BazaarFlipMod.TRACKER;
+        if (tracker.getTrackedItem() == null) return;
 
-        // debug: print for ANY screen
-
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null) return;
-
-        // Debug: print lore whenever we navigate to a new Bazaar page
-        if (!title.equals(bazaarflip$lastTitle)) {
-            bazaarflip$lastTitle = title;
-            mc.player.sendMessage(Text.literal("§6[BazaarFlip Debug] §eTitle: " + title), false);
-            int count = 0;
-            for (Slot slot : self.getScreenHandler().slots) {
-                ItemStack stack = slot.getStack();
-                if (stack.isEmpty()) continue;
-                LoreComponent lore = stack.get(DataComponentTypes.LORE);
-                if (lore == null || lore.lines().isEmpty()) continue;
-                mc.player.sendMessage(Text.literal("§a[Slot " + slot.id + "] §f" + stack.getName().getString()), false);
-                for (Text line : lore.lines()) {
-                    mc.player.sendMessage(Text.literal("§7  |" + line.getString() + "|"), false);
-                }
-                if (++count >= 8) break;
-            }
-        }
-
-        // Parse prices every 20 ticks
         if (++bazaarflip$tickCounter < 20) return;
         bazaarflip$tickCounter = 0;
 
-        BazaarTracker tracker = BazaarFlipMod.TRACKER;
-        if (tracker.getTrackedItem() == null) return;
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
 
         double bestBuy = -1, bestSell = -1;
         double yourBuy = -1, yourSell = -1;
@@ -74,6 +43,9 @@ public class HandledScreenMixin {
         for (Slot slot : self.getScreenHandler().slots) {
             ItemStack stack = slot.getStack();
             if (stack.isEmpty()) continue;
+
+            String itemName = strip(stack.getName().getString());
+
             LoreComponent lore = stack.get(DataComponentTypes.LORE);
             if (lore == null) continue;
 
@@ -81,19 +53,25 @@ public class HandledScreenMixin {
             for (Text line : lore.lines()) sb.append(strip(line.getString())).append('\n');
             String lorePlain = sb.toString();
 
-            double bp = parseDouble(PAT_BUY_PRICE, lorePlain);
-            double sp = parseDouble(PAT_SELL_PRICE, lorePlain);
-            if (bp > 0) bestBuy  = bp;
-            if (sp > 0) bestSell = sp;
+            if (itemName.equals("Create Buy Order")) {
+                double price = parseDouble(PAT_PRICE_EACH, lorePlain);
+                if (price > 0) bestBuy = price;
+            }
 
-            if (PAT_BUYING.matcher(lorePlain).find()) {
-                double price = parseDouble(PAT_ORDER_AT, lorePlain);
+            if (itemName.equals("Create Sell Offer")) {
+                double price = parseDouble(PAT_PRICE_EACH, lorePlain);
+                if (price > 0) bestSell = price;
+            }
+
+            if (itemName.startsWith("BUY ")) {
+                double price = parseDouble(PAT_PRICE_PER_UNIT, lorePlain);
                 int pos = parseInt(PAT_QUEUE_POS, lorePlain);
                 if (price > 0) yourBuy = price;
                 if (pos > 0)   buyPos  = pos;
             }
-            if (PAT_SELLING.matcher(lorePlain).find()) {
-                double price = parseDouble(PAT_ORDER_AT, lorePlain);
+
+            if (itemName.startsWith("SELL ")) {
+                double price = parseDouble(PAT_PRICE_PER_UNIT, lorePlain);
                 int pos = parseInt(PAT_QUEUE_POS, lorePlain);
                 if (price > 0) yourSell = price;
                 if (pos > 0)   sellPos  = pos;
